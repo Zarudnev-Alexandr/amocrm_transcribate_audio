@@ -16,4 +16,4 @@ COPY . .
 RUN mkdir -p /app/uploads && chmod -R 755 /app/uploads
 
 # Команда по умолчанию для запуска приложения
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
