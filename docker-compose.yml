@@ -43,7 +43,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 450M
+          memory: 350M
     depends_on:
       db:
         condition: service_healthy
