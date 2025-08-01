@@ -17,6 +17,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   adminer:
     image: adminer
@@ -36,6 +40,10 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
+    deploy:
+      resources:
+        limits:
+          memory: 450M
     depends_on:
       db:
         condition: service_healthy

@@ -1,5 +1,6 @@
 import json
 import os
+import gc
 
 from fastapi import FastAPI, Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,7 +54,8 @@ async def voice_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                         # Удаление временного файла
                         if os.path.exists(output_path):
                             os.remove(output_path)
-                            print(f"Временный файл удален: {output_path}", flush=True)
+                            gc.collect()
+                            print(f"Временный файл удален: {output_path} и память очищена", flush=True)
             except json.JSONDecodeError:
                 print("❌ Ошибка: Не удалось распарсить JSON в поле text", flush=True)
             except Exception as e:
