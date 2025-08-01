@@ -1,9 +1,11 @@
 import json
 import os
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from utils.added_funcs import add_note_to_deal
+from db.settings import get_db
+from utils.added_funcs import add_note_to_deal, is_note_processed, save_processed_note
 from utils.find_funcs import find_lead_id
 from utils.generate_funcs import transcribe_to_dialog
 from utils.get_funcs import download_audio_async
@@ -11,16 +13,22 @@ from utils.get_funcs import download_audio_async
 app = FastAPI()
 
 @app.post("/webhooks/voice")
-async def voice_webhook(request: Request):
+async def voice_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     form_data = await request.form()
 
     if "leads[note][0][note][note_type]" in form_data:
         lead_id = find_lead_id(form_data)
         print('✅✅✅', lead_id, flush=True)
         note_type = form_data["leads[note][0][note][note_type]"]
-        #10 - входящий, 11 - исходящий
+        note_id = form_data["leads[note][0][note][id]"]
+
+        # Проверяем, не был ли звонок уже обработан
+        if await is_note_processed(db, note_id):
+            print(f"⏩ Пропуск: звонок с note_id={note_id} уже обработан", flush=True)
+            return {"status": "skipped", "message": "Note already processed"}
+
         if note_type in ["10", "11"]:
-            print('📞Данные от AMOCrm (звонки)', form_data, flush=True)
+            print('📞 Данные от AMOCrm (звонки)', form_data, flush=True)
             text = form_data["leads[note][0][note][text]"]
             try:
                 text_data = json.loads(text)
@@ -35,16 +43,23 @@ async def voice_webhook(request: Request):
                         summary = "Краткая выжимка из диалога\n" + summary
 
                         print('💀💀💀', dialog_text, summary, flush=True)
-                        await add_note_to_deal(lead_id, dialog_text)
-                        await add_note_to_deal(lead_id, summary)
+                        # Добавляем примечания
+                        if await add_note_to_deal(lead_id, dialog_text) and await add_note_to_deal(lead_id, summary):
+                            # Сохраняем note_id как обработанный
+                            await save_processed_note(db, note_id)
+                        else:
+                            print(f"❌ Не удалось добавить примечания для note_id={note_id}", flush=True)
+
                         # Удаление временного файла
                         if os.path.exists(output_path):
                             os.remove(output_path)
-                            print(f"Временный файл удален: {output_path}")
+                            print(f"Временный файл удален: {output_path}", flush=True)
             except json.JSONDecodeError:
-                print("Ошибка: Не удалось распарсить JSON в поле text")
+                print("❌ Ошибка: Не удалось распарсить JSON в поле text", flush=True)
             except Exception as e:
-                print(f"Ошибка при обработке звонка: {e}")
+                print(f"❌ Ошибка при обработке звонка: {e}", flush=True)
+
+    return {"status": "ok"}
 
 
 

@@ -35,3 +35,18 @@ class SettingsStrings(Base):
         String,
         nullable=False,
     )
+
+
+class ProcessedNotes(Base):
+    __tablename__ = "processed_notes"
+
+    id: Mapped[int] = mapped_column(
+        BigInteger,
+        primary_key=True,
+        index=True,
+    )
+    note_id: Mapped[str] = mapped_column(
+        String,
+        unique=True,
+        nullable=False,
+    )

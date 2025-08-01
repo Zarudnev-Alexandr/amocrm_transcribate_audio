@@ -1,7 +1,10 @@
 # Добавление примечание к сделке в AmoCRM
 import httpx
 import requests
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.models import ProcessedNotes
 from utils.get_grom_db import get_settings_string
 
 
@@ -34,3 +37,15 @@ async def add_note_to_deal(deal_id, text):
     except Exception as e:
         print(f"❌ Неизвестная ошибка при добавлении примечания: {e}", flush=True)
         return False
+
+
+async def is_note_processed(db: AsyncSession, note_id: str) -> bool:
+    query = select(ProcessedNotes).where(ProcessedNotes.note_id == note_id)
+    result = await db.execute(query)
+    return result.scalar_one_or_none() is not None
+
+
+async def save_processed_note(db: AsyncSession, note_id: str):
+    note = ProcessedNotes(note_id=note_id)
+    db.add(note)
+    await db.commit()
