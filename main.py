@@ -45,11 +45,18 @@ async def voice_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
                         print('💀💀💀', dialog_text, summary, flush=True)
                         # Добавляем примечания
-                        if await add_note_to_deal(lead_id, dialog_text) and await add_note_to_deal(lead_id, summary):
-                            # Сохраняем note_id как обработанный
-                            await save_processed_note(db, note_id)
+                        if len(dialog_text) < 19900:#amocrm не хавает больше 20000 символов в примечании
+                            if await add_note_to_deal(lead_id, dialog_text) and await add_note_to_deal(lead_id, summary):
+                                # Сохраняем note_id как обработанный
+                                await save_processed_note(db, note_id)
+                            else:
+                                print(f"❌ Не удалось добавить примечания для note_id={note_id}", flush=True)
                         else:
-                            print(f"❌ Не удалось добавить примечания для note_id={note_id}", flush=True)
+                            if await add_note_to_deal(lead_id, summary):
+                                # Сохраняем note_id как обработанный
+                                await save_processed_note(db, note_id)
+                            else:
+                                print(f"❌ Не удалось добавить примечания для note_id={note_id}", flush=True)
 
                         # Удаление временного файла
                         if os.path.exists(output_path):
